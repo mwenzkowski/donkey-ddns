@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2025 Maximilian Wenzkowski
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[project]
+name = "donkey-ddns"
+version = "0.1.0"
+description = "A lightweight Dynamic DNS (DDNS, DynDNS) server that updates DNS records using Hetzner's DNS API."
+readme = "README.md"
+authors = [
+    { name = "Maximilian Wenzkowski" }
+]
+license = " GPL-3.0-or-later AND CC-BY-SA-4.0 AND CC0-1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "aiodns>=3.4.0",
+    "aiohttp>=3.12.11",
+    "argon2-cffi>=25.1.0",
+    "pydantic>=2.11.5",
+]
+
+[project.scripts]
+donkey-ddns = "donkey.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/donkey"]
+

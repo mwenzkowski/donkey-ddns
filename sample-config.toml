@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2025 Maximilian Wenzkowski
+#
+# SPDX-License-Identifier: CC0-1.0
+
+#listen_host = ["127.0.0.1", "::1"]
+#listen_port = 8080
+
+#log_level = "debug"
+
+hetzner_api_token = "TOKEN"
+hetzner_zone_id = "ZONE_ID"
+# hetzner_timeout_seconds = 30
+
+base_domain = "example.com"
+
+[[users]]
+name = "example_user"
+password_hash = '$argon2id$v=19$m=65536,t=3,p=4$Dy68dioGsBbx95SGMoWZVA$MhMv9reGNJfTEkyhMl+iYWYmVb+edB+qH3SZP/mMgWk'
+# subdomains the user is allowd to update, i.e. the full domain names are
+# - sub1.example.com
+# - sub2.example.com
+sub_domains = ["sub1", "sub2"]
+
+[[users]]
+name = "example_user2"
+password_hash = '$argon2id$v=19$m=65536,t=3,p=4$Dy68dioGsBbx95SGMoWZVA$MhMv9reGNJfTEkyhMl+iYWYmVb+edB+qH3SZP/mMgWk'
+sub_domains = ["sub3"]
