@@ -13,15 +13,18 @@ hetzner_zone_id = "ZONE_ID"
 
 base_domain = "example.com"
 
-[[users]]
-name = "example_user"
-password_hash = '$argon2id$v=19$m=65536,t=3,p=4$Dy68dioGsBbx95SGMoWZVA$MhMv9reGNJfTEkyhMl+iYWYmVb+edB+qH3SZP/mMgWk'
+users.example_user.password_hash = """
+    $argon2id$v=19$m=65536,t=3,p=4$\
+    Dy68dioGsBbx95SGMoWZVA$MhMv9reGNJfTEkyhMl+iYWYmVb+edB+qH3SZP/mMgWk"""
+
 # subdomains the user is allowd to update, i.e. the full domain names are
 # - sub1.example.com
 # - sub2.example.com
-sub_domains = ["sub1", "sub2"]
+[users.example_user.sub_domains.sub1]
+[users.example_user.sub_domains.sub2]
 
-[[users]]
-name = "example_user2"
-password_hash = '$argon2id$v=19$m=65536,t=3,p=4$Dy68dioGsBbx95SGMoWZVA$MhMv9reGNJfTEkyhMl+iYWYmVb+edB+qH3SZP/mMgWk'
-sub_domains = ["sub3"]
+users.example_user2.password_hash = """
+    $argon2id$v=19$m=65536,t=3,p=4$\
+    Dy68dioGsBbx95SGMoWZVA$MhMv9reGNJfTEkyhMl+iYWYmVb+edB+qH3SZP/mMgWk"""
+
+[users.example_user2.sub_domains.sub3]

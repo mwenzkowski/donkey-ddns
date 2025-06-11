@@ -43,8 +43,8 @@ class HetznerDnsClient:
         logger.debug("Fetch DNS records")
         try:
             async with self._session.get(
-                    f"{HETZNER_BASE_URL}/records",
-                    headers={"Auth-API-Token": self._api_token}
+                f"{HETZNER_BASE_URL}/records",
+                headers={"Auth-API-Token": self._api_token},
             ) as resp:
                 data = await resp.json()
                 logger.debug(f"Response: {data}")
@@ -62,16 +62,19 @@ class HetznerDnsClient:
                 "value": new_ip,
                 "type": record.type,
                 "name": record.name,
-                "zone_id": record.zone_id
+                "zone_id": record.zone_id,
             }
 
             if record.ttl:
                 payload["ttl"] = record.ttl
 
             async with self._session.put(
-                    f"{HETZNER_BASE_URL}/records/{record.id}",
-                    headers={"Auth-API-Token": self._api_token, "Content-Type": "application/json"},
-                    json=payload
+                f"{HETZNER_BASE_URL}/records/{record.id}",
+                headers={
+                    "Auth-API-Token": self._api_token,
+                    "Content-Type": "application/json",
+                },
+                json=payload,
             ) as resp:
                 if resp.status == 200:
                     logger.info(f"Updated {record.name} ({record.type}) -> {new_ip}")
@@ -92,18 +95,20 @@ class HetznerDnsClient:
                 "ttl": 60,
                 "type": rtype,
                 "name": name,
-                "zone_id": self._zone_id
+                "zone_id": self._zone_id,
             }
             logger.debug(f"Create record {payload}")
 
             async with self._session.post(
-                    f"{HETZNER_BASE_URL}/records",
-                    headers={"Auth-API-Token": self._api_token},
-                    json=payload
+                f"{HETZNER_BASE_URL}/records",
+                headers={"Auth-API-Token": self._api_token},
+                json=payload,
             ) as resp:
                 if resp.status == 200:
                     record = DnsRecordCreateResponse(**(await resp.json())).record
-                    logger.info(f"Created {record.name} ({record.type}) -> {record.value}")
+                    logger.info(
+                        f"Created {record.name} ({record.type}) -> {record.value}"
+                    )
                     return True
                 else:
                     text = await resp.text()

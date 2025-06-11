@@ -18,11 +18,11 @@ from argon2.exceptions import VerifyMismatchError
 from donkey.config import Config as DynDNSConfig
 from donkey.hetzner_dns_client import HetznerDnsClient
 from donkey.util import (
-    extract_base_domain,
-    extract_subdomain_name,
+    parse_ips,
     ip_type,
     is_subdomain,
-    parse_ips,
+    extract_base_domain,
+    extract_subdomain_name,
 )
 
 config_key = web.AppKey("config", DynDNSConfig)
@@ -106,7 +106,7 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         return web.Response(text="badauth", status=401)
 
     config = request.app[config_key]
-    user = config.get_user_by_name(username)
+    user = config.users.get(username)
 
     if user is None:
         logger.warning(f"Update request rejected: invalid username ({username})")
@@ -119,9 +119,8 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         logger.warning(f"Update request rejected: password mismatch")
         return web.Response(text="badauth", status=401)
 
-    query = request.query
-    hostname = query.get("hostname")
-    myip_param = query.get("myip", "")
+    hostname = request.query.get("hostname")
+    myip_param = request.query.get("myip", "")
 
     valid_hostname = hostname and is_subdomain(hostname)
 
@@ -142,11 +141,11 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         return web.Response(text="nohost", status=200)
 
     subdomain_name = extract_subdomain_name(hostname)
-
     if subdomain_name not in user.sub_domains:
         logger.warning(
             f"Update request rejected: hostname '{hostname}' is not in the list of updatable hostnames"
         )
+
         return web.Response(text="nohost", status=200)
 
     client = request.app[hetzner_dns_client_key]
