@@ -20,8 +20,16 @@ users.example_user.password_hash = """
 # subdomains the user is allowd to update, i.e. the full domain names are
 # - sub1.example.com
 # - sub2.example.com
+# - sub3.example.com
 [users.example_user.sub_domains.sub1]
+#ignore_ipv4 = false
+#ignore_ipv6 = false
 [users.example_user.sub_domains.sub2]
+#ignore_ipv4 = false
+ignore_ipv6 = true
+[users.example_user.sub_domains.sub3]
+ignore_ipv4 = true
+#ignore_ipv6 = false
 
 users.example_user2.password_hash = """
     $argon2id$v=19$m=65536,t=3,p=4$\

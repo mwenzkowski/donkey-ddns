@@ -9,6 +9,8 @@ from donkey.config import LogLevel
 
 logger = logging.getLogger("util")
 
+type IpAddress = IPv4Address | IPv6Address
+
 
 def convert_log_level(level: LogLevel) -> int:
     match level:
@@ -24,7 +26,7 @@ def convert_log_level(level: LogLevel) -> int:
     raise ValueError("Invalid log level")
 
 
-def parse_ips(ip_param: str) -> list[IPv4Address | IPv6Address]:
+def parse_ips(ip_param: str) -> list[IpAddress]:
     ips = []
     for part in ip_param.split(","):
         try:
@@ -33,6 +35,16 @@ def parse_ips(ip_param: str) -> list[IPv4Address | IPv6Address]:
         except ValueError:
             logger.warning(f"Invalid IP skipped: '{part.strip()}'")
     return ips
+
+
+def filter_ip_list(ips: list[IpAddress], ignore_ipv4, ignore_ipv6) -> list[IpAddress]:
+    ignored_ip_versions = []
+    if ignore_ipv4:
+        ignored_ip_versions.append(4)
+    if ignore_ipv6:
+        ignored_ip_versions.append(6)
+
+    return [ip for ip in ips if ip.version not in ignored_ip_versions]
 
 
 def ip_type(ip: IPv4Address | IPv6Address) -> str:

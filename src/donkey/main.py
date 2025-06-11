@@ -18,11 +18,12 @@ from argon2.exceptions import VerifyMismatchError
 from donkey.config import Config as DynDNSConfig
 from donkey.hetzner_dns_client import HetznerDnsClient
 from donkey.util import (
-    parse_ips,
-    ip_type,
-    is_subdomain,
     extract_base_domain,
     extract_subdomain_name,
+    filter_ip_list,
+    ip_type,
+    is_subdomain,
+    parse_ips,
 )
 
 config_key = web.AppKey("config", DynDNSConfig)
@@ -141,11 +142,20 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         return web.Response(text="nohost", status=200)
 
     subdomain_name = extract_subdomain_name(hostname)
-    if subdomain_name not in user.sub_domains:
+    subdomain_settings = user.sub_domains.get(subdomain_name)
+    if subdomain_settings is None:
         logger.warning(
             f"Update request rejected: hostname '{hostname}' is not in the list of updatable hostnames"
         )
+        return web.Response(text="nohost", status=200)
 
+    ip_list = filter_ip_list(
+        ip_list, subdomain_settings.ignore_ipv4, subdomain_settings.ignore_ipv6
+    )
+    if not ip_list:
+        logger.warning(
+            f"Update request rejected: All supplied IP addresses are ignored"
+        )
         return web.Response(text="nohost", status=200)
 
     client = request.app[hetzner_dns_client_key]

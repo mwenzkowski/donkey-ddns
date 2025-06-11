@@ -4,11 +4,10 @@
 
 import logging
 import tomllib
-from dataclasses import dataclass
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
 from pathlib import Path
-from typing import Annotated, Dict, Set
+from typing import Annotated, Dict
 
 from pydantic import BaseModel, PositiveInt, StringConstraints
 
@@ -38,23 +37,17 @@ class LogLevel(Enum):
 type IpAddress = IPv4Address | IPv6Address
 
 
-class TomlUserSettings(BaseModel):
+class SubdomainSettings(BaseModel):
+    ignore_ipv4: bool = False
+    ignore_ipv6: bool = False
+
+
+class UserSettings(BaseModel):
     password_hash: NonEmptyString
-    sub_domains: Dict[NonEmptyString, dict]
+    sub_domains: Dict[NonEmptyString, SubdomainSettings]
 
 
-@dataclass
-class UserSettings:
-    password_hash: str
-    sub_domains: Set[str]
-
-    @classmethod
-    def from_toml(cls, toml_user_settings: TomlUserSettings):
-        subdomains = set(toml_user_settings.sub_domains.keys())
-        return cls(toml_user_settings.password_hash, subdomains)
-
-
-class TomlConfig(BaseModel):
+class Config(BaseModel):
     listen_host: IpAddress | list[IpAddress] | None = None
     listen_port: PositiveInt = 8080
 
@@ -66,43 +59,13 @@ class TomlConfig(BaseModel):
 
     base_domain: NonEmptyString
 
-    users: Dict[NonEmptyString, TomlUserSettings]
-
-    @classmethod
-    def load(cls, toml_file: Path) -> "TomlConfig":
-        with open(toml_file, "rb") as f:
-            data = tomllib.load(f)
-        return cls.model_validate(data)
-
-
-@dataclass
-class Config:
-    listen_host: IpAddress | list[IpAddress] | None
-    listen_port: int
-
-    log_level: LogLevel
-
-    hetzner_api_token: str
-    hetzner_zone_id: str
-    hetzner_timeout_seconds: float
-
-    base_domain: str
-
-    users: Dict[str, UserSettings]
-
-    @classmethod
-    def from_toml(cls, toml_config: TomlConfig) -> "Config":
-        converted_users = {
-            user: UserSettings.from_toml(settings)
-            for user, settings in toml_config.users.items()
-        }
-        raw = toml_config.model_dump()
-        raw["users"] = converted_users
-        return cls(**raw)
+    users: Dict[NonEmptyString, UserSettings]
 
     @classmethod
     def load(cls, toml_file: Path) -> "Config":
-        return cls.from_toml(TomlConfig.load(toml_file))
+        with open(toml_file, "rb") as f:
+            data = tomllib.load(f)
+        return cls.model_validate(data)
 
     def get_aiohttp_listen_hosts(self) -> str | list[str] | None:
         match self.listen_host:
