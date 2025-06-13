@@ -26,6 +26,8 @@ from donkey.util import (
     parse_ips,
 )
 
+DEFAULT_CONFIG_FILE = Path.home() / ".config" / "donkey-ddns" / "config.toml"
+
 CONFIG_KEY = web.AppKey("config", DynDNSConfig)
 HETZNER_DNS_CLIENT_KEY = web.AppKey("hetzner_dns_client", HetznerDnsClient)
 PASSWORD_HASHER_KEY = web.AppKey("password_hasher", PasswordHasher)
@@ -197,7 +199,7 @@ def main() -> None:
     parser.add_argument(
         "-c",
         "--config-file",
-        default="~/.config/donkey-ddns/config.toml",
+        default=str(DEFAULT_CONFIG_FILE),
         help="The path to a config file to use for configuration",
     ),
 
