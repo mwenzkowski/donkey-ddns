@@ -26,8 +26,9 @@ from donkey.util import (
     parse_ips,
 )
 
-config_key = web.AppKey("config", DynDNSConfig)
-password_hasher_key = web.AppKey("password_hasher", PasswordHasher)
+CONFIG_KEY = web.AppKey("config", DynDNSConfig)
+HETZNER_DNS_CLIENT_KEY = web.AppKey("hetzner_dns_client", HetznerDnsClient)
+PASSWORD_HASHER_KEY = web.AppKey("password_hasher", PasswordHasher)
 
 logger = logging.getLogger("dyndns-server")
 
@@ -37,9 +38,6 @@ def setup_logger(config: DynDNSConfig) -> None:
         level=config.log_level.to_python_log_level(),
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
-
-
-hetzner_dns_client_key = web.AppKey("hetzner_dns_client", HetznerDnsClient)
 
 
 async def update_ips(
@@ -106,14 +104,14 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         logger.warning(f"Update request rejected: invalid auth header ({auth_header})")
         return web.Response(text="badauth", status=401)
 
-    config = request.app[config_key]
+    config = request.app[CONFIG_KEY]
     user = config.users.get(username)
 
     if user is None:
         logger.warning(f"Update request rejected: invalid username ({username})")
         return web.Response(text="badauth", status=401)
 
-    ph = request.app[password_hasher_key]
+    ph = request.app[PASSWORD_HASHER_KEY]
     try:
         await asyncio.to_thread(ph.verify, user.password_hash, password)
     except VerifyMismatchError:
@@ -158,7 +156,7 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         )
         return web.Response(text="nohost", status=200)
 
-    client = request.app[hetzner_dns_client_key]
+    client = request.app[HETZNER_DNS_CLIENT_KEY]
     return await update_ips(client, hostname, ip_list)
 
 
@@ -171,22 +169,22 @@ async def handle_dyndns(request: web.Request) -> web.Response:
 
 
 async def hetzner_dns_client_context(app: web.Application):
-    config = app[config_key]
-    app[hetzner_dns_client_key] = HetznerDnsClient(
+    config = app[CONFIG_KEY]
+    app[HETZNER_DNS_CLIENT_KEY] = HetznerDnsClient(
         config.hetzner_api_token, config.hetzner_zone_id, config.hetzner_timeout_seconds
     )
 
     yield
 
-    await app[hetzner_dns_client_key].close_session()
+    await app[HETZNER_DNS_CLIENT_KEY].close_session()
 
 
 def create_app(config: DynDNSConfig):
     app = web.Application()
     app.router.add_get("/nic/update", handle_dyndns)
 
-    app[config_key] = config
-    app[password_hasher_key] = PasswordHasher()
+    app[CONFIG_KEY] = config
+    app[PASSWORD_HASHER_KEY] = PasswordHasher()
 
     app.cleanup_ctx.append(hetzner_dns_client_context)
     return app
