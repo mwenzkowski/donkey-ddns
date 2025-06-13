@@ -211,9 +211,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    config_file = Path("config.toml")
-    if args.config_file is not None:
-        config_file = Path(args.config_file).expanduser()
+    config_file = Path(args.config_file)
     if not config_file.is_file():
         print(f"ERROR: config file {config_file} does not exists")
         print("Create it or select ")
