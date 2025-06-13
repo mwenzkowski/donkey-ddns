@@ -33,14 +33,10 @@ CONFIG_KEY = web.AppKey("config", DynDNSConfig)
 HETZNER_DNS_CLIENT_KEY = web.AppKey("hetzner_dns_client", HetznerDnsClient)
 PASSWORD_HASHER_KEY = web.AppKey("password_hasher", PasswordHasher)
 
-logger = logging.getLogger("dyndns-server")
-
-
-def setup_logger(config: DynDNSConfig) -> None:
-    logging.basicConfig(
-        level=config.log_level.to_python_log_level(),
-        format="%(asctime)s [%(levelname)s] %(message)s",
-    )
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
 
 async def update_ips(
@@ -62,7 +58,7 @@ async def update_ips(
         matching_records = [r for r in target_records if r.type == rtype]
 
         if len(matching_records) > 1:
-            logger.error(f"More than one matching {rtype} record: {matching_records}")
+            logging.error(f"More than one matching {rtype} record: {matching_records}")
             response_lines.append("911")
             continue
 
@@ -76,7 +72,7 @@ async def update_ips(
         record = matching_records[0]
 
         if record.value == str(ip):
-            logger.info(f"No IP change for {record.name} ({record.type})")
+            logging.info(f"No IP change for {record.name} ({record.type})")
             response_lines.append(f"nochg {ip}")
             continue
 
@@ -93,10 +89,10 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
     client_ip = request.remote
     auth_header = request.headers.get("Authorization", "")
 
-    logger.info(f"Request from {client_ip} ({auth_header}): {request.rel_url}")
+    logging.info(f"Request from {client_ip} ({auth_header}): {request.rel_url}")
 
     if not auth_header.startswith("Basic "):
-        logger.warning(f"Update request rejected: invalid auth header ({auth_header})")
+        logging.warning(f"Update request rejected: invalid auth header ({auth_header})")
         return web.Response(text="badauth", status=401)
 
     try:
@@ -104,21 +100,21 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         credentials = base64.b64decode(b64_credentials).decode("utf-8")
         username, password = credentials.split(":", 1)
     except (IndexError, binascii.Error, UnicodeDecodeError):
-        logger.warning(f"Update request rejected: invalid auth header ({auth_header})")
+        logging.warning(f"Update request rejected: invalid auth header ({auth_header})")
         return web.Response(text="badauth", status=401)
 
     config = request.app[CONFIG_KEY]
     user = config.users.get(username)
 
     if user is None:
-        logger.warning(f"Update request rejected: invalid username ({username})")
+        logging.warning(f"Update request rejected: invalid username ({username})")
         return web.Response(text="badauth", status=401)
 
     ph = request.app[PASSWORD_HASHER_KEY]
     try:
         await asyncio.to_thread(ph.verify, user.password_hash, password)
     except VerifyMismatchError:
-        logger.warning(f"Update request rejected: password mismatch")
+        logging.warning(f"Update request rejected: password mismatch")
         return web.Response(text="badauth", status=401)
 
     hostname = request.query.get("hostname")
@@ -127,17 +123,17 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
     valid_hostname = hostname and is_subdomain(hostname)
 
     if not valid_hostname:
-        logger.warning(f"Update request rejected: invalid hostname '{hostname}'")
+        logging.warning(f"Update request rejected: invalid hostname '{hostname}'")
         return web.Response(text="badagent", status=400)
 
     ip_list = parse_ips(myip_param)
     if not ip_list:
-        logger.warning(f"Update request rejected: invalid myip param '{myip_param}'")
+        logging.warning(f"Update request rejected: invalid myip param '{myip_param}'")
         return web.Response(text="badagent", status=400)
 
     base_domain = extract_base_domain(hostname)
     if base_domain != config.base_domain:
-        logger.warning(
+        logging.warning(
             "Update request rejected: wrong base domain "
             f"(got '{base_domain}', expected ('{config.base_domain}')"
         )
@@ -146,7 +142,7 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
     subdomain_name = extract_subdomain_name(hostname)
     subdomain_settings = user.sub_domains.get(subdomain_name)
     if subdomain_settings is None:
-        logger.warning(
+        logging.warning(
             "Update request rejected: "
             f"hostname '{hostname}' is not in the list of updatable hostnames"
         )
@@ -156,7 +152,7 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         ip_list, subdomain_settings.ignore_ipv4, subdomain_settings.ignore_ipv6
     )
     if not ip_list:
-        logger.warning(
+        logging.warning(
             f"Update request rejected: All supplied IP addresses are ignored"
         )
         return web.Response(text="nohost", status=200)
@@ -169,7 +165,7 @@ async def handle_dyndns(request: web.Request) -> web.Response:
     try:
         return await handle_dyndns_internal(request)
     except Exception:
-        logger.exception("Unhandled exception")
+        logging.exception("Unhandled exception")
         return web.Response(text="911", status=500)
 
 
@@ -225,7 +221,7 @@ def main() -> None:
         sys.exit(1)
 
     config = DynDNSConfig.load(config_file)
-    setup_logger(config)
+    logging.getLogger().setLevel(config.log_level.to_python_log_level())
 
     host = config.get_aiohttp_listen_hosts()
     port = config.listen_port

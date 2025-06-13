@@ -9,8 +9,6 @@ from pydantic import BaseModel
 
 HETZNER_BASE_URL = "https://dns.hetzner.com/api/v1"
 
-logger = logging.getLogger("hetzner_dns_client")
-
 
 class DnsRecord(BaseModel):
     id: str
@@ -40,23 +38,23 @@ class HetznerDnsClient:
 
     async def fetch_dns_records(self) -> list[DnsRecord] | None:
         assert not self._session_closed
-        logger.debug("Fetch DNS records")
+        logging.debug("Fetch DNS records")
         try:
             async with self._session.get(
                 f"{HETZNER_BASE_URL}/records",
                 headers={"Auth-API-Token": self._api_token},
             ) as resp:
                 data = await resp.json()
-                logger.debug(f"Response: {data}")
+                logging.debug(f"Response: {data}")
                 all_records = DnsRecordsResponse(**data).records
                 return [r for r in all_records if r.zone_id == self._zone_id]
         except Exception:
-            logger.exception("Fetching DNS records failed")
+            logging.exception("Fetching DNS records failed")
             return None
 
     async def update_record(self, record: DnsRecord, new_ip: str) -> bool:
         assert not self._session_closed
-        logger.debug(f"Update record {record} to {new_ip}")
+        logging.debug(f"Update record {record} to {new_ip}")
         try:
             payload = {
                 "value": new_ip,
@@ -77,14 +75,14 @@ class HetznerDnsClient:
                 json=payload,
             ) as resp:
                 if resp.status == 200:
-                    logger.info(f"Updated {record.name} ({record.type}) -> {new_ip}")
+                    logging.info(f"Updated {record.name} ({record.type}) -> {new_ip}")
                     return True
                 else:
                     text = await resp.text()
-                    logger.error(f"Failed update: {resp.status} {text}")
+                    logging.error(f"Failed update: {resp.status} {text}")
                     return False
         except Exception:
-            logger.exception("Update exception")
+            logging.exception("Update exception")
             return False
 
     async def create_record(self, name: str, ip: str, rtype: str) -> bool:
@@ -97,7 +95,7 @@ class HetznerDnsClient:
                 "name": name,
                 "zone_id": self._zone_id,
             }
-            logger.debug(f"Create record {payload}")
+            logging.debug(f"Create record {payload}")
 
             async with self._session.post(
                 f"{HETZNER_BASE_URL}/records",
@@ -106,16 +104,16 @@ class HetznerDnsClient:
             ) as resp:
                 if resp.status == 200:
                     record = DnsRecordCreateResponse(**(await resp.json())).record
-                    logger.info(
+                    logging.info(
                         f"Created {record.name} ({record.type}) -> {record.value}"
                     )
                     return True
                 else:
                     text = await resp.text()
-                    logger.error(f"Failed create: {resp.status} {text}")
+                    logging.error(f"Failed create: {resp.status} {text}")
                     return False
         except Exception:
-            logger.exception("Create exception")
+            logging.exception("Create exception")
             return False
 
     async def close_session(self) -> None:

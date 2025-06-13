@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
+
 from ipaddress import IPv4Address, IPv6Address, ip_address
 
-logger = logging.getLogger("util")
 
 type IpAddress = IPv4Address | IPv6Address
 
@@ -17,7 +17,7 @@ def parse_ips(ip_param: str) -> list[IpAddress]:
             ip = ip_address(part.strip())
             ips.append(ip)
         except ValueError:
-            logger.warning(f"Invalid IP skipped: '{part.strip()}'")
+            logging.warning(f"Invalid IP skipped: '{part.strip()}'")
     return ips
 
 
