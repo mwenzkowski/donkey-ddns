@@ -30,7 +30,7 @@ class DnsRecordCreateResponse(BaseModel):
 
 
 class HetznerDnsClient:
-    def __init__(self, api_token: str, zone_id: str, timeout_seconds: float):
+    def __init__(self, api_token: str, zone_id: str, timeout_seconds: float) -> None:
         self._api_token = api_token
         self._zone_id = zone_id
 

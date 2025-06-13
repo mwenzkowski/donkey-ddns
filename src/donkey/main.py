@@ -10,6 +10,7 @@ import logging
 import sys
 from ipaddress import IPv4Address, IPv6Address
 from pathlib import Path
+from typing import AsyncGenerator
 
 from aiohttp import web
 from argon2 import PasswordHasher
@@ -172,7 +173,7 @@ async def handle_dyndns(request: web.Request) -> web.Response:
         return web.Response(text="911", status=500)
 
 
-async def hetzner_dns_client_context(app: web.Application):
+async def hetzner_dns_client_context(app: web.Application) -> AsyncGenerator[None]:
     config = app[CONFIG_KEY]
     app[HETZNER_DNS_CLIENT_KEY] = HetznerDnsClient(
         config.hetzner_api_token, config.hetzner_zone_id, config.hetzner_timeout_seconds
@@ -183,7 +184,7 @@ async def hetzner_dns_client_context(app: web.Application):
     await app[HETZNER_DNS_CLIENT_KEY].close_session()
 
 
-def create_app(config: DynDNSConfig):
+def create_app(config: DynDNSConfig) -> web.Application:
     app = web.Application()
     app.router.add_get("/nic/update", handle_dyndns)
 
