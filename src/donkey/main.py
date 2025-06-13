@@ -137,7 +137,8 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
     base_domain = extract_base_domain(hostname)
     if base_domain != config.base_domain:
         logger.warning(
-            f"Update request rejected: wrong base domain (got '{base_domain}', expected '{config.base_domain}'"
+            "Update request rejected: wrong base domain "
+            f"(got '{base_domain}', expected ('{config.base_domain}')"
         )
         return web.Response(text="nohost", status=200)
 
@@ -145,7 +146,8 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
     subdomain_settings = user.sub_domains.get(subdomain_name)
     if subdomain_settings is None:
         logger.warning(
-            f"Update request rejected: hostname '{hostname}' is not in the list of updatable hostnames"
+            "Update request rejected: "
+            f"hostname '{hostname}' is not in the list of updatable hostnames"
         )
         return web.Response(text="nohost", status=200)
 
