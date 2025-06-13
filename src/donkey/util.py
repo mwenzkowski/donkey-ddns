@@ -5,25 +5,9 @@
 import logging
 from ipaddress import IPv4Address, IPv6Address, ip_address
 
-from donkey.config import LogLevel
-
 logger = logging.getLogger("util")
 
 type IpAddress = IPv4Address | IPv6Address
-
-
-def convert_log_level(level: LogLevel) -> int:
-    match level:
-        case LogLevel.DEBUG:
-            return logging.DEBUG
-        case LogLevel.INFO:
-            return logging.INFO
-        case LogLevel.WARNING:
-            return logging.WARNING
-        case LogLevel.ERROR:
-            return logging.ERROR
-
-    raise ValueError("Invalid log level")
 
 
 def parse_ips(ip_param: str) -> list[IpAddress]:
