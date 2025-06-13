@@ -198,7 +198,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="DynDNS server that updates subdomains of a single Hetzner DNS Zone"
     )
-    parser.add_argument(
+
+    subparsers = parser.add_subparsers(
+        dest="command", metavar="<COMMAND>", help="Sub-commands", required=True
+    )
+
+    serve_parser = subparsers.add_parser("serve", help="Start DynDNS server")
+    serve_parser.add_argument(
         "-c",
         "--config-file",
         default=str(DEFAULT_CONFIG_FILE),
