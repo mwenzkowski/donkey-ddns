@@ -194,7 +194,7 @@ def create_app(config: DynDNSConfig):
     return app
 
 
-def main() -> None:
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="DynDNS server that updates subdomains of a single Hetzner DNS Zone"
     )
@@ -202,10 +202,14 @@ def main() -> None:
         "-c",
         "--config-file",
         default=str(DEFAULT_CONFIG_FILE),
-        help="The path to a config file to use for configuration",
+        help="The configuration file to use",
     ),
 
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
 
     config_file = Path("config.toml")
     if args.config_file is not None:
