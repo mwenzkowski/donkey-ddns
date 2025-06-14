@@ -3,13 +3,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
-import tomllib
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
 from pathlib import Path
 from typing import Annotated, Dict
 
 from pydantic import BaseModel, PositiveInt, StringConstraints
+from tomlkit.toml_file import TOMLFile
 
 type NonEmptyString = Annotated[str, StringConstraints(min_length=1)]
 
@@ -63,9 +63,8 @@ class Config(BaseModel):
 
     @classmethod
     def load(cls, toml_file: Path) -> "Config":
-        with open(toml_file, "rb") as f:
-            data = tomllib.load(f)
-        return cls.model_validate(data)
+        data = TOMLFile(toml_file).read()
+        return cls.model_validate(data.unwrap())
 
     def get_aiohttp_listen_hosts(self) -> str | list[str] | None:
         match self.listen_host:
