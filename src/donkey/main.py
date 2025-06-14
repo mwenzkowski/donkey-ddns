@@ -6,7 +6,9 @@ import argparse
 import asyncio
 import base64
 import binascii
+import getpass
 import logging
+import sys
 from ipaddress import IPv4Address, IPv6Address
 from pathlib import Path
 from typing import AsyncGenerator
@@ -207,12 +209,15 @@ def parse_args() -> argparse.Namespace:
         help="The configuration file to use",
     ),
 
+    create_password_hash_parser = subparsers.add_parser(
+        "create-password-hash",
+        help="Generate a password hash suitable for storing in the configuration file",
+    )
+
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
-
+def command_serve(args: argparse.Namespace) -> None:
     config = DynDNSConfig.load(Path(args.config_file))
 
     logging.getLogger().setLevel(config.log_level.to_python_log_level())
@@ -225,6 +230,32 @@ def main() -> None:
         f"Starting DynDNS server (zone ID: {zone_id}, base domain: {config.base_domain})"
     )
     web.run_app(create_app(config), host=host, port=port)
+
+
+def command_create_password_hash() -> None:
+    password = getpass.getpass(prompt="Enter password: ")
+    password_repeated = getpass.getpass(prompt="Repeat password: ")
+
+    if password != password_repeated:
+        print("Passwords don't match", file=sys.stderr)
+        sys.exit(1)
+
+    if len(password) == 0:
+        print("Password cannot be empty", file=sys.stderr)
+        sys.exit(1)
+
+    ph = PasswordHasher()
+    hash = ph.hash(password)
+    print(f"\n{hash}")
+
+
+def main() -> None:
+    args = parse_args()
+
+    if args.command == "serve":
+        command_serve(args)
+    elif args.command == "create-password-hash":
+        command_create_password_hash()
 
 
 if __name__ == "__main__":
