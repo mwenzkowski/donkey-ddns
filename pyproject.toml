@@ -17,6 +17,7 @@ dependencies = [
     "aiohttp>=3.12.11",
     "argon2-cffi>=25.1.0",
     "pydantic>=2.11.5",
+    "tomlkit>=0.13.3",
 ]
 
 [project.scripts]

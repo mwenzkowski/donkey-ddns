@@ -7,7 +7,6 @@ import asyncio
 import base64
 import binascii
 import logging
-import sys
 from ipaddress import IPv4Address, IPv6Address
 from pathlib import Path
 from typing import AsyncGenerator
@@ -214,13 +213,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
-    config_file = Path(args.config_file)
-    if not config_file.is_file():
-        print(f"ERROR: config file {config_file} does not exists")
-        print("Create it or select ")
-        sys.exit(1)
+    config = DynDNSConfig.load(Path(args.config_file))
 
-    config = DynDNSConfig.load(config_file)
     logging.getLogger().setLevel(config.log_level.to_python_log_level())
 
     host = config.get_aiohttp_listen_hosts()
