@@ -13,7 +13,7 @@ hetzner_zone_id = "ZONE_ID"
 
 base_domain = "example.com"
 
-users.example_user.password_hash = """
+users.example_user.password_hash = """\
     $argon2id$v=19$m=65536,t=3,p=4$\
     Dy68dioGsBbx95SGMoWZVA$MhMv9reGNJfTEkyhMl+iYWYmVb+edB+qH3SZP/mMgWk"""
 
@@ -31,7 +31,7 @@ ignore_ipv6 = true
 ignore_ipv4 = true
 #ignore_ipv6 = false
 
-users.example_user2.password_hash = """
+users.example_user2.password_hash = """\
     $argon2id$v=19$m=65536,t=3,p=4$\
     Dy68dioGsBbx95SGMoWZVA$MhMv9reGNJfTEkyhMl+iYWYmVb+edB+qH3SZP/mMgWk"""
 
