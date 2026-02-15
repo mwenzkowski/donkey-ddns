@@ -46,38 +46,29 @@ async def update_ips(
     assert ip_list, "ip_list must not be empty"
     subname = extract_subdomain_name(hostname)
 
-    all_records = await client.fetch_dns_records()
-    if all_records is None:
-        return web.Response(text="911", status=500)
-
-    target_records = [r for r in all_records if r.name == subname]
-
     response_lines = []
 
     for ip in ip_list:
-        rtype = ip_type(ip)
-        matching_records = [r for r in target_records if r.type == rtype]
+        old_ip = None
 
-        if len(matching_records) > 1:
-            logging.error(f"More than one matching {rtype} record: {matching_records}")
-            response_lines.append("911")
-            continue
+        if ip.version == 4:
+            old_ip = await client.fetch_ipv4(subname)
+        elif ip.version == 6:
+            old_ip = await client.fetch_ipv6(subname)
 
-        if not matching_records:
-            if await client.create_record(subname, str(ip), rtype):
+        if old_ip is None:
+            if await client.create_record(subname, ip):
                 response_lines.append(f"good {ip}")
             else:
                 response_lines.append("911")
             continue
 
-        record = matching_records[0]
-
-        if record.value == str(ip):
-            logging.info(f"No IP change for {record.name} ({record.type})")
+        if old_ip == ip:
+            logging.info(f"No IP change for {subname} ({ip_type(ip)})")
             response_lines.append(f"nochg {ip}")
             continue
 
-        if await client.update_record(record, str(ip)):
+        if await client.update_record(subname, ip):
             response_lines.append(f"good {ip}")
         else:
             response_lines.append("911")
