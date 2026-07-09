@@ -52,6 +52,14 @@ class ActionResponse(BaseModel):
     action: Action
 
 
+def _record_type_for(ip: IpAddress) -> DnsRecordType:
+    if isinstance(ip, IPv4Address):
+        return DnsRecordType.A
+    if isinstance(ip, IPv6Address):
+        return DnsRecordType.AAAA
+    raise TypeError(f"Unsupported ip type: {type(ip)}")
+
+
 class HetznerDnsClient:
     def __init__(self, api_token: str, zone_id: str, timeout_seconds: float) -> None:
         self._api_token = api_token
@@ -161,15 +169,38 @@ class HetznerDnsClient:
             logging.error("Failed action: unknown error")
         return False
 
+    async def _post_action(self, url: str, payload: dict, description: str) -> bool:
+        try:
+            async with self._session.post(
+                url,
+                headers={"Authorization": f"Bearer {self._api_token}"},
+                json=payload,
+            ) as resp:
+                if resp.status == 201:
+                    data = await resp.json()
+                else:
+                    text = await resp.text()
+                    logging.error(f"Failed to {description}: {resp.status} {text}")
+                    return False
+        except Exception:
+            logging.exception(f"Failed to {description}")
+            return False
+
+        try:
+            response = ActionResponse.model_validate(data)
+        except ValidationError:
+            logging.exception(f"Failed to {description}")
+            return False
+
+        try:
+            return await self._wait_for_action_to_finish(response.action)
+        except Exception:
+            logging.exception(f"Failed to {description}")
+            return False
+
     async def create_record(self, name: str, ip: IpAddress) -> bool:
         assert not self._session_closed
-
-        if isinstance(ip, IPv4Address):
-            rtype = DnsRecordType.A
-        elif isinstance(ip, IPv6Address):
-            rtype = DnsRecordType.AAAA
-        else:
-            raise TypeError(f"Unsupported ip type: {type(ip)}")
+        rtype = _record_type_for(ip)
 
         payload = {
             "name": name,
@@ -179,82 +210,30 @@ class HetznerDnsClient:
         }
         logging.debug(f"Create record {payload}")
 
-        try:
-            async with self._session.post(
-                f"{HETZNER_BASE_URL}/zones/{self._zone_id}/rrsets",
-                headers={"Authorization": f"Bearer {self._api_token}"},
-                json=payload,
-            ) as resp:
-                if resp.status == 201:
-                    data = await resp.json()
-                else:
-                    text = await resp.text()
-                    logging.error(f"Failed create: {resp.status} {text}")
-                    return False
-        except Exception:
-            logging.exception("Create exception")
-            return False
-
-        try:
-            response = ActionResponse.model_validate(data)
-        except ValidationError:
-            logging.exception("Create exception")
-            return False
-
-        try:
-            result = await self._wait_for_action_to_finish(response.action)
-        except Exception:
-            logging.exception("Create exception")
-            return False
-
+        result = await self._post_action(
+            f"{HETZNER_BASE_URL}/zones/{self._zone_id}/rrsets",
+            payload,
+            f"create record {name} ({rtype.value})",
+        )
         if result:
-            logging.info(f"Created {name} ({rtype}) -> {str(ip)}")
+            logging.info(f"Created {name} ({rtype.value}) -> {ip}")
 
         return result
 
     async def update_record(self, name: str, ip: IpAddress) -> bool:
         assert not self._session_closed
-
-        if isinstance(ip, IPv4Address):
-            rtype = DnsRecordType.A
-        elif isinstance(ip, IPv6Address):
-            rtype = DnsRecordType.AAAA
-        else:
-            raise TypeError(f"Unsupported ip type: {type(ip)}")
+        rtype = _record_type_for(ip)
 
         payload = {"records": [{"value": str(ip)}]}
         logging.debug(f"Update record {payload}")
 
-        try:
-            async with self._session.post(
-                f"{HETZNER_BASE_URL}/zones/{self._zone_id}/rrsets/{name}/{rtype.value}/actions/set_records",
-                headers={"Authorization": f"Bearer {self._api_token}"},
-                json=payload,
-            ) as resp:
-                if resp.status == 201:
-                    data = await resp.json()
-                else:
-                    text = await resp.text()
-                    logging.error(f"Failed create: {resp.status} {text}")
-                    return False
-        except Exception:
-            logging.exception("Create exception")
-            return False
-
-        try:
-            response = ActionResponse.model_validate(data)
-        except ValidationError:
-            logging.exception("Create exception")
-            return False
-
-        try:
-            result = await self._wait_for_action_to_finish(response.action)
-        except Exception:
-            logging.exception("Create exception")
-            return False
-
+        result = await self._post_action(
+            f"{HETZNER_BASE_URL}/zones/{self._zone_id}/rrsets/{name}/{rtype.value}/actions/set_records",
+            payload,
+            f"update record {name} ({rtype.value})",
+        )
         if result:
-            logging.info(f"Created {name} ({rtype}) -> {str(ip)}")
+            logging.info(f"Updated {name} ({rtype.value}) -> {ip}")
 
         return result
 
