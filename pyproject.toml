@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Maximilian Wenzkowski
+# SPDX-FileCopyrightText: 2026 Maximilian Wenzkowski
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -29,4 +29,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/donkey"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
 
