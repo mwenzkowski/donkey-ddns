@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Maximilian Wenzkowski
+# SPDX-FileCopyrightText: 2026 Maximilian Wenzkowski
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -36,11 +36,11 @@ def ip_type(ip: IPv4Address | IPv6Address) -> str:
 
 
 def is_subdomain(domain: str) -> bool:
-    # Remove any potential trailing dot (Trailing dot is allowed for domains)
-    domain = domain.rstrip(".")
+    # A single trailing dot is allowed (DNS root label)
+    domain = domain.removesuffix(".")
 
     parts = domain.split(".")
-    return len(parts) > 2
+    return len(parts) > 2 and all(parts)
 
 
 def extract_subdomain_name(full_domain: str) -> str:
@@ -50,4 +50,4 @@ def extract_subdomain_name(full_domain: str) -> str:
 
 def extract_base_domain(full_domain: str) -> str:
     assert is_subdomain(full_domain)
-    return full_domain.split(".", maxsplit=1)[1]
+    return full_domain.removesuffix(".").split(".", maxsplit=1)[1]
