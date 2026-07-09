@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Maximilian Wenzkowski
+# SPDX-FileCopyrightText: 2026 Maximilian Wenzkowski
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -7,7 +7,7 @@ import sys
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
 from pathlib import Path
-from typing import Annotated, Dict
+from typing import Annotated
 
 import tomlkit
 from pydantic import (
@@ -17,7 +17,6 @@ from pydantic import (
     StringConstraints,
     ValidationError,
 )
-from tomlkit import TOMLDocument
 from tomlkit.exceptions import KeyAlreadyPresent, ParseError
 
 type NonEmptyString = Annotated[str, StringConstraints(min_length=1)]
@@ -55,7 +54,7 @@ class SubdomainSettings(BaseModel):
 
 class UserSettings(BaseModel):
     password_hash: NonEmptyString
-    sub_domains: Dict[NonEmptyString, SubdomainSettings]
+    sub_domains: dict[NonEmptyString, SubdomainSettings]
 
     model_config = ConfigDict(extra="forbid")
 
@@ -72,18 +71,14 @@ class Config(BaseModel):
 
     base_domain: NonEmptyString
 
-    users: Dict[NonEmptyString, UserSettings]
+    users: dict[NonEmptyString, UserSettings]
 
     model_config = ConfigDict(extra="forbid")
 
     @staticmethod
     def _print_parse_error(error: ParseError, toml_path: Path, toml_text: str) -> None:
         lines = toml_text.splitlines()
-        error_line = (
-            lines[error.line - 1]
-            if 0 <= error.line - 1 < len(lines)
-            else "<unknown line>"
-        )
+        error_line = lines[error.line - 1] if 0 <= error.line - 1 < len(lines) else "<unknown line>"
         caret_line = " " * (error.col - 1) + "^"
 
         print(
@@ -94,9 +89,7 @@ class Config(BaseModel):
         print(f"{error}", file=sys.stderr)
 
     @staticmethod
-    def _print_validation_error(
-        error: ValidationError, toml_path: Path, toml_text: str, toml_doc: TOMLDocument
-    ) -> None:
+    def _print_validation_error(error: ValidationError, toml_path: Path) -> None:
         print(
             f"Config file {toml_path} is invalid:\n",
             file=sys.stderr,
@@ -104,12 +97,8 @@ class Config(BaseModel):
 
         for e in error.errors():
             loc = e["loc"]
-            location_path = ".".join((map(str, loc)))
-
-            if e["type"] == "extra_forbidden":
-                msg = "Unknown TOML key"
-            else:
-                msg = e["msg"]
+            location_path = ".".join(map(str, loc))
+            msg = "Unknown TOML key" if e["type"] == "extra_forbidden" else e["msg"]
 
             print(f"    {location_path}: {msg}", file=sys.stderr)
 
@@ -145,7 +134,7 @@ class Config(BaseModel):
         try:
             config = cls.model_validate(toml_doc.unwrap())
         except ValidationError as e:
-            cls._print_validation_error(e, toml_path, toml_text, toml_doc)
+            cls._print_validation_error(e, toml_path)
             sys.exit(1)
 
         return config

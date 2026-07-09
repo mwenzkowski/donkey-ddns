@@ -8,9 +8,9 @@ import base64
 import getpass
 import logging
 import sys
+from collections.abc import AsyncGenerator
 from ipaddress import IPv4Address, IPv6Address
 from pathlib import Path
-from typing import AsyncGenerator
 
 from aiohttp import web
 from argon2 import PasswordHasher
@@ -48,11 +48,9 @@ async def update_ips(
     response_lines = []
 
     for ip in ip_list:
-        old_ip = None
-
-        if ip.version == 4:
+        if isinstance(ip, IPv4Address):
             old_ip = await client.fetch_ipv4(subname)
-        elif ip.version == 6:
+        else:
             old_ip = await client.fetch_ipv6(subname)
 
         if old_ip is FETCH_FAILED:
@@ -76,11 +74,11 @@ async def update_ips(
         else:
             response_lines.append("911")
 
-    status = 200 if any((r != "911" for r in response_lines)) else 500
+    status = 200 if any(r != "911" for r in response_lines) else 500
     return web.Response(text="\n".join(response_lines), status=status)
 
 
-async def handle_dyndns_internal(request: web.Request) -> web.Response:
+async def handle_dyndns_internal(request: web.Request) -> web.Response:  # noqa: PLR0911
     client_ip = request.remote
     auth_header = request.headers.get("Authorization", "")
 
@@ -112,7 +110,7 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
     try:
         await asyncio.to_thread(ph.verify, user.password_hash, password)
     except VerifyMismatchError:
-        logging.warning(f"Update request rejected: password mismatch")
+        logging.warning("Update request rejected: password mismatch")
         return web.Response(text="badauth", status=401)
 
     hostname = request.query.get("hostname")
@@ -150,9 +148,7 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         ip_list, subdomain_settings.ignore_ipv4, subdomain_settings.ignore_ipv6
     )
     if not ip_list:
-        logging.warning(
-            f"Update request rejected: All supplied IP addresses are ignored"
-        )
+        logging.warning("Update request rejected: All supplied IP addresses are ignored")
         return web.Response(text="nohost", status=200)
 
     client = request.app[HETZNER_DNS_CLIENT_KEY]
@@ -204,9 +200,9 @@ def parse_args() -> argparse.Namespace:
         "--config-file",
         default=str(DEFAULT_CONFIG_FILE),
         help="The configuration file to use",
-    ),
+    )
 
-    create_password_hash_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "create-password-hash",
         help="Generate a password hash suitable for storing in the configuration file",
     )
@@ -223,9 +219,7 @@ def command_serve(args: argparse.Namespace) -> None:
     port = config.listen_port
     zone_id = config.hetzner_zone_id
 
-    logging.info(
-        f"Starting DynDNS server (zone ID: {zone_id}, base domain: {config.base_domain})"
-    )
+    logging.info(f"Starting DynDNS server (zone ID: {zone_id}, base domain: {config.base_domain})")
     web.run_app(create_app(config), host=host, port=port)
 
 
@@ -242,8 +236,8 @@ def command_create_password_hash() -> None:
         sys.exit(1)
 
     ph = PasswordHasher()
-    hash = ph.hash(password)
-    print(f"\n{hash}")
+    password_hash = ph.hash(password)
+    print(f"\n{password_hash}")
 
 
 def main() -> None:

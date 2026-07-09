@@ -4,6 +4,7 @@
 import asyncio
 import logging
 from enum import Enum
+from http import HTTPStatus
 from ipaddress import IPv4Address, IPv6Address
 from urllib.parse import quote
 
@@ -86,7 +87,7 @@ class HetznerDnsClient:
                 params={"name": name, "type": rtype.value},
                 headers={"Authorization": f"Bearer {self._api_token}"},
             ) as resp:
-                if resp.status != 200:
+                if resp.status != HTTPStatus.OK:
                     text = await resp.text()
                     logging.error(f"Failed to fetch DNS records: {resp.status} {text}")
                     return FETCH_FAILED
@@ -134,7 +135,7 @@ class HetznerDnsClient:
                 f"{HETZNER_BASE_URL}/zones/{self._zone_id}/actions/{action_id}",
                 headers={"Authorization": f"Bearer {self._api_token}"},
             ) as resp:
-                if resp.status != 200:
+                if resp.status != HTTPStatus.OK:
                     text = await resp.text()
                     logging.error(f"Failed to fetch action: {resp.status} {text}")
                     return None
@@ -156,7 +157,7 @@ class HetznerDnsClient:
     async def _wait_for_action_to_finish(self, action: Action) -> bool:
         assert not self._session_closed
 
-        async def waitloop():
+        async def waitloop() -> None:
             nonlocal action
             while action is not None and action.status == ActionStatus.RUNNING:
                 await asyncio.sleep(1)
@@ -185,7 +186,7 @@ class HetznerDnsClient:
                 headers={"Authorization": f"Bearer {self._api_token}"},
                 json=payload,
             ) as resp:
-                if resp.status == 201:
+                if resp.status == HTTPStatus.CREATED:
                     data = await resp.json()
                 else:
                     text = await resp.text()

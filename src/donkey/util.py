@@ -3,9 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
-
 from ipaddress import IPv4Address, IPv6Address, ip_address
-
 
 type IpAddress = IPv4Address | IPv6Address
 
@@ -21,7 +19,7 @@ def parse_ips(ip_param: str) -> list[IpAddress]:
     return ips
 
 
-def filter_ip_list(ips: list[IpAddress], ignore_ipv4, ignore_ipv6) -> list[IpAddress]:
+def filter_ip_list(ips: list[IpAddress], ignore_ipv4: bool, ignore_ipv6: bool) -> list[IpAddress]:
     ignored_ip_versions = []
     if ignore_ipv4:
         ignored_ip_versions.append(4)
@@ -32,7 +30,11 @@ def filter_ip_list(ips: list[IpAddress], ignore_ipv4, ignore_ipv6) -> list[IpAdd
 
 
 def ip_type(ip: IPv4Address | IPv6Address) -> str:
-    return "AAAA" if ip.version == 6 else "A"
+    return "AAAA" if isinstance(ip, IPv6Address) else "A"
+
+
+# subdomain label + at least two base domain labels
+MIN_SUBDOMAIN_LABELS = 3
 
 
 def is_subdomain(domain: str) -> bool:
@@ -40,12 +42,12 @@ def is_subdomain(domain: str) -> bool:
     domain = domain.removesuffix(".")
 
     parts = domain.split(".")
-    return len(parts) > 2 and all(parts)
+    return len(parts) >= MIN_SUBDOMAIN_LABELS and all(parts)
 
 
 def extract_subdomain_name(full_domain: str) -> str:
     assert is_subdomain(full_domain)
-    return full_domain.split(".")[0]
+    return full_domain.split(".", maxsplit=1)[0]
 
 
 def extract_base_domain(full_domain: str) -> str:
