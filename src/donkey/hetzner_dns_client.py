@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Maximilian Wenzkowski
+# SPDX-FileCopyrightText: 2026 Maximilian Wenzkowski
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 import asyncio
@@ -37,10 +37,15 @@ class ActionStatus(Enum):
     ERROR = "error"
 
 
+class ActionError(BaseModel):
+    code: str
+    message: str
+
+
 class Action(BaseModel):
     id: int
     status: ActionStatus
-    error: str | None
+    error: ActionError | None
 
 
 class ActionResponse(BaseModel):
@@ -131,7 +136,10 @@ class HetznerDnsClient:
             return True
 
         assert action.status == ActionStatus.ERROR
-        logging.error(f"Failed action: {action.error}")
+        if action.error is not None:
+            logging.error(f"Failed action: {action.error.message} ({action.error.code})")
+        else:
+            logging.error("Failed action: unknown error")
         return False
 
     async def create_record(self, name: str, ip: IpAddress) -> bool:
