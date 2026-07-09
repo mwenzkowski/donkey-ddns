@@ -52,6 +52,13 @@ class ActionResponse(BaseModel):
     action: Action
 
 
+class FetchFailed:
+    """Marker: the state of the record could not be determined."""
+
+
+FETCH_FAILED = FetchFailed()
+
+
 def _record_type_for(ip: IpAddress) -> DnsRecordType:
     if isinstance(ip, IPv4Address):
         return DnsRecordType.A
@@ -69,7 +76,7 @@ class HetznerDnsClient:
         self._session = aiohttp.ClientSession(timeout=timeout)
         self._session_closed = False
 
-    async def _fetch_ip(self, name: str, rtype: DnsRecordType) -> IpAddress | None:
+    async def _fetch_ip(self, name: str, rtype: DnsRecordType) -> IpAddress | FetchFailed | None:
         assert not self._session_closed
         logging.debug("Fetch rrset")
         try:
@@ -80,18 +87,18 @@ class HetznerDnsClient:
                 if resp.status != 200:
                     text = await resp.text()
                     logging.error(f"Failed to fetch DNS records: {resp.status} {text}")
-                    return None
+                    return FETCH_FAILED
                 data = await resp.json()
         except Exception:
             logging.exception("Fetching DNS records failed")
-            return None
+            return FETCH_FAILED
 
         logging.debug(f"Response: {data}")
         try:
             rrsets = GetRRSetResponse.model_validate(data).rrsets
         except ValidationError:
             logging.exception("Unexpected response while fetching DNS records")
-            return None
+            return FETCH_FAILED
 
         if not rrsets:
             return None
@@ -101,18 +108,18 @@ class HetznerDnsClient:
 
         return records[0].value
 
-    async def fetch_ipv4(self, name: str) -> IPv4Address | None:
+    async def fetch_ipv4(self, name: str) -> IPv4Address | FetchFailed | None:
         result = await self._fetch_ip(name=name, rtype=DnsRecordType.A)
-        if not result:
-            return None
+        if result is None or result is FETCH_FAILED:
+            return result
 
         assert isinstance(result, IPv4Address)
         return result
 
-    async def fetch_ipv6(self, name: str) -> IPv6Address | None:
+    async def fetch_ipv6(self, name: str) -> IPv6Address | FetchFailed | None:
         result = await self._fetch_ip(name=name, rtype=DnsRecordType.AAAA)
-        if not result:
-            return None
+        if result is None or result is FETCH_FAILED:
+            return result
 
         assert isinstance(result, IPv6Address)
         return result

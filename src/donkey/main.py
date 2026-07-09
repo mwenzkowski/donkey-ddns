@@ -17,7 +17,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
 from donkey.config import Config as DynDNSConfig
-from donkey.hetzner_dns_client import HetznerDnsClient
+from donkey.hetzner_dns_client import FETCH_FAILED, HetznerDnsClient
 from donkey.util import (
     extract_base_domain,
     extract_subdomain_name,
@@ -54,6 +54,10 @@ async def update_ips(
             old_ip = await client.fetch_ipv4(subname)
         elif ip.version == 6:
             old_ip = await client.fetch_ipv6(subname)
+
+        if old_ip is FETCH_FAILED:
+            response_lines.append("911")
+            continue
 
         if old_ip is None:
             if await client.create_record(subname, ip):
