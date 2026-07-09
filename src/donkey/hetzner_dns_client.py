@@ -5,6 +5,7 @@ import asyncio
 import logging
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
+from urllib.parse import quote
 
 import aiohttp
 from pydantic import BaseModel, ValidationError
@@ -235,11 +236,11 @@ class HetznerDnsClient:
         payload = {"records": [{"value": str(ip)}]}
         logging.debug(f"Update record {payload}")
 
-        result = await self._post_action(
-            f"{HETZNER_BASE_URL}/zones/{self._zone_id}/rrsets/{name}/{rtype.value}/actions/set_records",
-            payload,
-            f"update record {name} ({rtype.value})",
+        url = (
+            f"{HETZNER_BASE_URL}/zones/{self._zone_id}/rrsets/"
+            f"{quote(name, safe='')}/{rtype.value}/actions/set_records"
         )
+        result = await self._post_action(url, payload, f"update record {name} ({rtype.value})")
         if result:
             logging.info(f"Updated {name} ({rtype.value}) -> {ip}")
 
