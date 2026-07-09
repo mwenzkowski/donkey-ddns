@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Maximilian Wenzkowski
+# SPDX-FileCopyrightText: 2026 Maximilian Wenzkowski
 #
 # SPDX-License-Identifier: CC0-1.0
 
@@ -31,7 +31,8 @@ ignore_ipv6 = true
 ignore_ipv4 = true
 #ignore_ipv6 = false
 
-users.example_user2.password_hash = """\
+[users.example_user2]
+password_hash = """\
     $argon2id$v=19$m=65536,t=3,p=4$\
     Dy68dioGsBbx95SGMoWZVA$MhMv9reGNJfTEkyhMl+iYWYmVb+edB+qH3SZP/mMgWk"""
 
