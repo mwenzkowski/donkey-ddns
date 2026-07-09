@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Maximilian Wenzkowski
+# SPDX-FileCopyrightText: 2026 Maximilian Wenzkowski
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -81,10 +81,13 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
     client_ip = request.remote
     auth_header = request.headers.get("Authorization", "")
 
-    logging.info(f"Request from {client_ip} ({auth_header}): {request.rel_url}")
+    logging.info(f"Request from {client_ip}: {request.rel_url}")
 
     if not auth_header.startswith("Basic "):
-        logging.warning(f"Update request rejected: invalid auth header ({auth_header})")
+        if not auth_header:
+            logging.warning("Update request rejected: missing Authorization header")
+        else:
+            logging.warning("Update request rejected: unsupported Authorization scheme")
         return web.Response(text="badauth", status=401)
 
     try:
@@ -92,7 +95,7 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         credentials = base64.b64decode(b64_credentials).decode("utf-8")
         username, password = credentials.split(":", 1)
     except (IndexError, binascii.Error, UnicodeDecodeError):
-        logging.warning(f"Update request rejected: invalid auth header ({auth_header})")
+        logging.warning("Update request rejected: malformed Basic auth credentials")
         return web.Response(text="badauth", status=401)
 
     config = request.app[CONFIG_KEY]
