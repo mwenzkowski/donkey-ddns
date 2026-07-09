@@ -69,13 +69,21 @@ class HetznerDnsClient:
                 f"{HETZNER_BASE_URL}/zones/{self._zone_id}/rrsets?name={name}&type={rtype.value}",
                 headers={"Authorization": f"Bearer {self._api_token}"},
             ) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    logging.error(f"Failed to fetch DNS records: {resp.status} {text}")
+                    return None
                 data = await resp.json()
         except Exception:
             logging.exception("Fetching DNS records failed")
             return None
 
         logging.debug(f"Response: {data}")
-        rrsets = GetRRSetResponse.model_validate(data).rrsets
+        try:
+            rrsets = GetRRSetResponse.model_validate(data).rrsets
+        except ValidationError:
+            logging.exception("Unexpected response while fetching DNS records")
+            return None
 
         if not rrsets:
             return None
@@ -101,7 +109,7 @@ class HetznerDnsClient:
         assert isinstance(result, IPv6Address)
         return result
 
-    async def _fetch_action(self, action_id: int) -> Action:
+    async def _fetch_action(self, action_id: int) -> Action | None:
         assert not self._session_closed
         logging.debug("Fetch action")
         try:
@@ -109,14 +117,22 @@ class HetznerDnsClient:
                 f"{HETZNER_BASE_URL}/zones/{self._zone_id}/actions/{action_id}",
                 headers={"Authorization": f"Bearer {self._api_token}"},
             ) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    logging.error(f"Failed to fetch action: {resp.status} {text}")
+                    return None
                 data = await resp.json()
         except Exception:
-            logging.exception("Fetching DNS records failed")
+            logging.exception("Fetching action failed")
             return None
 
         logging.debug(f"Response: {data}")
 
-        action = ActionResponse.model_validate(data).action
+        try:
+            action = ActionResponse.model_validate(data).action
+        except ValidationError:
+            logging.exception("Unexpected response while fetching action")
+            return None
 
         return action
 
@@ -125,12 +141,16 @@ class HetznerDnsClient:
 
         async def waitloop():
             nonlocal action
-            while action.status == ActionStatus.RUNNING:
+            while action is not None and action.status == ActionStatus.RUNNING:
                 print(action.status)
                 action = await self._fetch_action(action.id)
                 await asyncio.sleep(1)
 
         await asyncio.wait_for(waitloop(), timeout=60)
+
+        if action is None:
+            logging.error("Failed to poll action status")
+            return False
 
         if action.status == ActionStatus.SUCCESS:
             return True
