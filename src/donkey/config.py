@@ -13,6 +13,7 @@ import tomlkit
 from pydantic import (
     BaseModel,
     ConfigDict,
+    PositiveFloat,
     PositiveInt,
     StringConstraints,
     ValidationError,
@@ -67,7 +68,7 @@ class Config(BaseModel):
 
     hetzner_api_token: NonEmptyString
     hetzner_zone_id: NonEmptyString
-    hetzner_timeout_seconds: float = 30
+    hetzner_timeout_seconds: PositiveFloat = 30
 
     base_domain: NonEmptyString
 
