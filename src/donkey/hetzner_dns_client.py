@@ -78,7 +78,9 @@ class HetznerDnsClient:
         self._session = aiohttp.ClientSession(timeout=timeout)
         self._session_closed = False
 
-    async def _fetch_ip(self, name: str, rtype: DnsRecordType) -> IpAddress | FetchFailed | None:
+    async def _fetch_ip(  # noqa: PLR0911
+        self, name: str, rtype: DnsRecordType
+    ) -> IpAddress | FetchFailed | None:
         assert not self._session_closed
         logging.debug("Fetch rrset")
         try:
@@ -106,8 +108,14 @@ class HetznerDnsClient:
         if not rrsets:
             return None
 
-        assert len(rrsets) == 1
+        if len(rrsets) != 1:
+            logging.error(f"Expected one rrset for {name} ({rtype.value}), got {len(rrsets)}")
+            return FETCH_FAILED
+
         records = rrsets[0].records
+        if not records:
+            logging.error(f"The rrset for {name} ({rtype.value}) contains no records")
+            return FETCH_FAILED
 
         return records[0].value
 
@@ -116,7 +124,9 @@ class HetznerDnsClient:
         if result is None or result is FETCH_FAILED:
             return result
 
-        assert isinstance(result, IPv4Address)
+        if not isinstance(result, IPv4Address):
+            logging.error(f"Expected an IPv4 address in the A record for {name}, got {result}")
+            return FETCH_FAILED
         return result
 
     async def fetch_ipv6(self, name: str) -> IPv6Address | FetchFailed | None:
@@ -124,7 +134,9 @@ class HetznerDnsClient:
         if result is None or result is FETCH_FAILED:
             return result
 
-        assert isinstance(result, IPv6Address)
+        if not isinstance(result, IPv6Address):
+            logging.error(f"Expected an IPv6 address in the AAAA record for {name}, got {result}")
+            return FETCH_FAILED
         return result
 
     async def _fetch_action(self, action_id: int) -> Action | None:
