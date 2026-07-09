@@ -142,8 +142,8 @@ class HetznerDnsClient:
         async def waitloop():
             nonlocal action
             while action is not None and action.status == ActionStatus.RUNNING:
-                action = await self._fetch_action(action.id)
                 await asyncio.sleep(1)
+                action = await self._fetch_action(action.id)
 
         await asyncio.wait_for(waitloop(), timeout=60)
 
