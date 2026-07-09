@@ -5,7 +5,6 @@
 import argparse
 import asyncio
 import base64
-import binascii
 import getpass
 import logging
 import sys
@@ -94,7 +93,7 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:
         b64_credentials = auth_header.split(" ")[1]
         credentials = base64.b64decode(b64_credentials).decode("utf-8")
         username, password = credentials.split(":", 1)
-    except (IndexError, binascii.Error, UnicodeDecodeError):
+    except (IndexError, ValueError):
         logging.warning("Update request rejected: malformed Basic auth credentials")
         return web.Response(text="badauth", status=401)
 
