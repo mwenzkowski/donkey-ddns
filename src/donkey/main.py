@@ -7,6 +7,7 @@ import asyncio
 import base64
 import getpass
 import logging
+import secrets
 import sys
 from collections.abc import AsyncGenerator
 from ipaddress import IPv4Address, IPv6Address
@@ -32,6 +33,7 @@ DEFAULT_CONFIG_FILE = Path.home() / ".config" / "donkey-ddns" / "config.toml"
 CONFIG_KEY = web.AppKey("config", DynDNSConfig)
 HETZNER_DNS_CLIENT_KEY = web.AppKey("hetzner_dns_client", HetznerDnsClient)
 PASSWORD_HASHER_KEY = web.AppKey("password_hasher", PasswordHasher)
+DUMMY_HASH_KEY = web.AppKey("dummy_password_hash", str)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -102,14 +104,22 @@ async def handle_dyndns_internal(request: web.Request) -> web.Response:  # noqa:
     config = request.app[CONFIG_KEY]
     user = config.users.get(username)
 
+    # Unknown users get a dummy hash so the verification takes the same
+    # time whether or not the username exists.
+    password_hash = user.password_hash if user else request.app[DUMMY_HASH_KEY]
+
+    ph = request.app[PASSWORD_HASHER_KEY]
+    try:
+        await asyncio.to_thread(ph.verify, password_hash, password)
+        password_ok = True
+    except VerifyMismatchError:
+        password_ok = False
+
     if user is None:
         logging.warning(f"Update request rejected: invalid username ({username})")
         return web.Response(text="badauth", status=401)
 
-    ph = request.app[PASSWORD_HASHER_KEY]
-    try:
-        await asyncio.to_thread(ph.verify, user.password_hash, password)
-    except VerifyMismatchError:
+    if not password_ok:
         logging.warning("Update request rejected: password mismatch")
         return web.Response(text="badauth", status=401)
 
@@ -178,8 +188,10 @@ def create_app(config: DynDNSConfig) -> web.Application:
     app = web.Application()
     app.router.add_get("/nic/update", handle_dyndns)
 
+    ph = PasswordHasher()
     app[CONFIG_KEY] = config
-    app[PASSWORD_HASHER_KEY] = PasswordHasher()
+    app[PASSWORD_HASHER_KEY] = ph
+    app[DUMMY_HASH_KEY] = ph.hash(secrets.token_urlsafe(16))
 
     app.cleanup_ctx.append(hetzner_dns_client_context)
     return app
