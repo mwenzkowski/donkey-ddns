@@ -81,7 +81,8 @@ class HetznerDnsClient:
         logging.debug("Fetch rrset")
         try:
             async with self._session.get(
-                f"{HETZNER_BASE_URL}/zones/{self._zone_id}/rrsets?name={name}&type={rtype.value}",
+                f"{HETZNER_BASE_URL}/zones/{self._zone_id}/rrsets",
+                params={"name": name, "type": rtype.value},
                 headers={"Authorization": f"Bearer {self._api_token}"},
             ) as resp:
                 if resp.status != 200:
