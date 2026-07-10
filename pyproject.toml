@@ -13,11 +13,11 @@ authors = [
 license = "GPL-3.0-or-later AND CC-BY-SA-4.0 AND CC0-1.0"
 requires-python = ">=3.14"
 dependencies = [
-    "aiodns>=3.4.0",
-    "aiohttp>=3.12.11",
+    "aiodns>=4.0.4",
+    "aiohttp>=3.14.1",
     "argon2-cffi>=25.1.0",
     "pydantic>=2.13.4",
-    "tomlkit>=0.13.3",
+    "tomlkit>=0.15.0",
 ]
 
 [project.scripts]
